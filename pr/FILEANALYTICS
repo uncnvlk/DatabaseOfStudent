@@ -1,0 +1,326 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Net.Sockets;
+using System.Net;
+//using System.Xml.Serialization;
+//using System.Diagnostics;
+using System.Threading;
+namespace FILEANALYTICS
+{
+    [SerializableAttribute]
+    public class work_w_file
+    {
+        // путь к файлу
+        public string path; 
+ 
+        // переменные для чтения файла
+        FileStream Stream;
+        StreamReader Reader;
+ 
+ 
+        // строчка для чтения файла
+        string line;  
+        public string[,] info;
+ 
+        // количество столбцов
+        public int count_of_t;
+ 
+        // перменная-маркер
+        public bool n = false;
+ 
+        // конструктор
+        public work_w_file(string path)
+        {
+ 
+            this.path = path;
+            this.Stream = new FileStream(this.path, FileMode.OpenOrCreate);
+            this.Reader = new StreamReader(Stream);
+ 
+ 
+        }
+ 
+        // проверка на пустоту файла
+        public bool check_for_null(string line)
+        {
+            if (line != null) return true;
+            else return false;
+        }
+ 
+ 
+        // добавление строчки
+        public void add(string[] str)
+        {
+            string[,] info_ = rewrite();
+ 
+            for (int i = 0; i < count_of_t; i++)
+            {
+                info_[info.GetLength(0), i] = str[i];
+            }
+ 
+            this.info = info_;
+        }
+ 
+        // удаление строчки
+        public void del(string del_)
+        {
+            int i = 0;
+            int n = 0;
+            string[,] info_ = new string[(info.GetLength(0) - 1), count_of_t];
+ 
+            do
+            {
+                if (info[i, 0] == del_)
+                {
+ 
+                    for (int k = 0; k < i; k++)
+                    {
+                        for (int j = 0; j < count_of_t; j++)
+                        {
+                            info_[k, j] = info[k, j];
+                        }
+                    }
+ 
+                    for (int k = i + 1; k < info.GetLength(0); k++)
+                    {
+                        for (int j = 0; j < count_of_t; j++)
+                        {
+                            info_[k - 1, j] = info[k, j];
+                        }
+                    }
+ 
+                    n = 1;
+                }
+                else i++;
+ 
+            } while ((n != 1) && (i < info.GetLength(0)));
+ 
+            if (n == 0)
+            {
+ 
+                Console.WriteLine("Абитуриент не найден. Проверьте данные и повторите попытку.");
+            }
+ 
+            else info = info_;
+        }
+ 
+        // перезапись (копирование)
+        public string[,] rewrite()
+        {
+ 
+            string[,] info_ = new string[(info.GetLength(0) + 1), count_of_t];
+ 
+ 
+            for (int i = 0; i < info.GetLength(0); i++)
+            {
+                for (int j = 0; j < count_of_t; j++)
+                {
+                    info_[i, j] = info[i, j];
+                }
+            }
+ 
+            return info_;
+        }
+ 
+ 
+        // чтение файла
+        public string[,] reading()
+        {
+ 
+            line = Reader.ReadLine();
+ 
+ 
+            if (check_for_null(line) == true)
+            {
+                this.count_of_t = (line.Split(new char[] { ';' })).Length;
+                this.info = new string[0, count_of_t];
+                do
+                {
+                    string[] temp = new string[count_of_t];
+                    string[,] info_ = rewrite();
+ 
+                    temp = line.Split(new char[] { ';' });
+ 
+                    for (int i = 0; i < temp.Length; i++)
+                    {
+                        info_[info.GetLength(0), i] = temp[i];
+                    }
+ 
+                    info = info_;
+                    line = Reader.ReadLine();
+ 
+                } while (check_for_null(line) == true);
+            }
+            else Console.WriteLine("Файл пуст, обработка невозможна!");
+            Console.WriteLine();
+ 
+            // закрытие файла 
+            Reader.Close();
+            Stream.Close();
+ 
+            return info;
+        }
+ 
+        // вывод информации на экран
+        public void show()
+        {
+            Console.WriteLine();
+ 
+            for (int i = 0; i < info.GetLength(0); i++)
+            {
+                for (int j = 0; j < info.GetLength(1); j++)
+                {
+                    Console.Write($"{info[i, j],-15}");
+                }
+                Console.WriteLine();
+            }
+            Console.WriteLine();
+        }
+ 
+        // запись
+        public void write()
+        {
+            StreamWriter sw = new StreamWriter(path);
+            for (int i = 0; i < info.GetLength(0); i++)
+            {
+                string s = info[i, 0];
+                for (int j = 1; j < count_of_t; j++)
+                {
+                    s = s + ';' + info[i, j];
+                }
+                sw.WriteLine(s);
+            }
+ 
+            sw.Close();
+        }
+ 
+ 
+ 
+        //вспомогательная функция для сортировки по алфавиту
+        protected static bool needToReOrder(string s1, string s2)
+        {
+            for (int i = 0; i < (s1.Length > s2.Length ? s2.Length : s1.Length); i++)
+            {
+                if (s1.ToCharArray()[i] < s2.ToCharArray()[i]) return false;
+                if (s1.ToCharArray()[i] > s2.ToCharArray()[i]) return true;
+            }
+            return false;
+        }
+ 
+        // сортировка по алфавиту
+        public void sort_by_alf()
+        {
+            string[] temp = new string[count_of_t];
+            for (int i = 1; i < info.GetLength(0); i++)
+            {
+ 
+                for (int j = 1; j < info.GetLength(0) - 2; j++)
+                {
+                    if (needToReOrder(info[j, 0], info[j + 1, 0]))
+                    {
+                        for (int k = 0; k < info.GetLength(1); k++)
+                        {
+                            temp[k] = info[j, k];
+                        }
+ 
+                        for (int k = 0; k < info.GetLength(1); k++)
+                        {
+                            info[j, k] = info[j + 1, k];
+                        }
+ 
+                        for (int k = 0; k < info.GetLength(1); k++)
+                        {
+                            info[j + 1, k] = temp[k];
+                        }
+                    }
+                }
+            }
+ 
+            Console.ReadKey();
+        }
+ 
+ 
+        // переменная для поиска фамилии в таблице
+        private int search_of_string_by_surname(string surname)
+        {
+            int k = 0;
+            int n = 0;
+ 
+ 
+            while ((k < info.GetLength(0)) && (n == 0))
+            {
+                if (info[k, 0] == surname) { n++; }
+                k++;
+            }
+            if (n != 0) return k - 1;
+            else return -1;
+        }
+ 
+ 
+       
+        // формирование нового столбца
+        public string[,] sum()
+        {
+            if (this.n == true) { Console.WriteLine("Сумма баллов уже посчитана!"); return this.info; }
+            else
+            {
+                string[,] info_ = new string[(info.GetLength(0)), (count_of_t + 1)];
+ 
+                for (int j = 0; j < info.GetLength(1); j++)
+                {
+                    info_[0, j] = this.info[0, j];
+                }
+                info_[0, (info.GetLength(1))] = "Сумма баллов";
+ 
+ 
+                for (int i = 1; i < info.GetLength(0) - 1; i++)
+                {
+                    for (int j = 0; j < info.GetLength(1); j++)
+                    {
+                        info_[i, j] = this.info[i, j];
+                    }
+                    info_[i, (info.GetLength(1))] = (int.Parse(info[i, (info.GetLength(1) - 1)]) + int.Parse(info[i, ((info.GetLength(1) - 1) - 1)]) + int.Parse(info[i, ((info.GetLength(1) - 1) - 2)])).ToString();
+ 
+                }
+ 
+                this.count_of_t += 1;
+                this.n = true;
+ 
+                return info_;
+            }
+        }
+ 
+        // сортировка по сумме баллов
+        public void sort_by_sum()
+        {
+            string[] temp = new string[count_of_t];
+            for (int i = 1; i < info.GetLength(0); i++)
+            {
+ 
+                for (int j = 1; j < info.GetLength(0) - 2; j++)
+                {
+                    if ((int.Parse(info[j, count_of_t - 1]) < int.Parse(info[j + 1, count_of_t - 1])))
+                    {
+                        for (int k = 0; k < info.GetLength(1); k++)
+                        {
+                            temp[k] = info[j, k];
+                        }
+ 
+                        for (int k = 0; k < info.GetLength(1); k++)
+                        {
+                            info[j, k] = info[j + 1, k];
+                        }
+ 
+                        for (int k = 0; k < info.GetLength(1); k++)
+                        {
+                            info[j + 1, k] = temp[k];
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
