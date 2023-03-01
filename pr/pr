@@ -1,0 +1,118 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Net.Sockets;
+using System.Net;
+//using System.Xml.Serialization;
+//using System.Diagnostics;
+using System.Threading;
+using FILEANALYTICS;
+ 
+ 
+namespace read_the_file
+{
+     
+    class Programm
+    {
+ 
+        public static void server()
+        {
+            Console.WriteLine("Ожидание...");
+            TcpListener clientListener = new TcpListener(34567);
+            clientListener.Start();
+            TcpClient client = clientListener.AcceptTcpClient();
+            NetworkStream readerStream = client.GetStream();
+            BinaryFormatter outformat = new BinaryFormatter();
+            FileStream fs = new FileStream("course.txt", FileMode.OpenOrCreate);
+            BinaryWriter bw = new BinaryWriter(fs);
+            int count;
+            count = int.Parse(outformat.Deserialize(readerStream).ToString());//Получаем размер файла
+            int i = 0;
+            for (; i < count; i += 1024)//Цикл пока не дойдём до конца файла
+            {
+ 
+                byte[] buf = (byte[])(outformat.Deserialize(readerStream));//Собственно читаем из потока и записываем в файл
+                bw.Write(buf);
+            }
+            Console.WriteLine("Файл получен и десериализован!");
+            bw.Close();
+            fs.Close();
+ 
+        }
+ 
+        public static void info()
+        {
+            Console.WriteLine("—————————————————————————————————————");
+            Console.WriteLine("|          МАИ Институт №12         |");
+            Console.WriteLine("|         Группа Т12О-209Б-19       |");
+            Console.WriteLine("|        Сидоренкова Елизавета      |");
+            Console.WriteLine("|           Курсовая работа         |");
+            Console.WriteLine("—————————————————————————————————————");
+            Console.WriteLine();
+        }
+ 
+        public static void menu()
+        {
+            Console.WriteLine();
+            Console.WriteLine("Что вы хотите сделать?");
+            Console.WriteLine("1. Вывести данные на экран.");
+            Console.WriteLine("2. Рассчитать сумму баллов каждого абитуриента.");
+            Console.WriteLine("3. Отсортировать список по алфавиту.");
+            Console.WriteLine("4. Отсортировать список по убыванию суммы баллов.");
+            Console.WriteLine("5. Выход.");
+        }
+ 
+ 
+        public static void Main(string[] args)
+        {
+            info();
+            server();
+            int m;
+            string path = AppDomain.CurrentDomain.BaseDirectory;
+            path += "/course.txt";
+            work_w_file obj = new work_w_file(path);
+;
+            obj.reading();
+            //show();
+ 
+            do
+            {
+                menu();
+                bool Tr;
+                do
+                {
+                    Console.Write("Введите номер пункта: ");
+                    Tr = Int32.TryParse(Console.ReadLine(), out m);
+                    if (Tr != true || m < 1 || m > 5)
+                        Console.WriteLine("Неправильное значение, оно должно быть в пределах диапозона 1...5");
+                } while (Tr != true || m < 1 || m > 5);
+ 
+                if (m == 1) { obj.show(); }
+ 
+                else if (m == 2)
+                {
+                   obj.info = obj.sum();
+                }
+                else if (m == 3)
+                {
+                    obj.sort_by_alf();
+                    obj.show();
+                }
+                else if (m == 4)
+                {
+                    obj.info = obj.sum();
+                    obj.sort_by_sum();
+                    obj.show();
+                }
+ 
+            } while (m != 5);
+ 
+            obj.write();
+ 
+            Environment.Exit(0);
+        }
+    }
+}
